@@ -26,45 +26,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Zero-Touch MERN Stack Build and Deploy
+      - name: Connect and Deploy to EC2 via SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          PEM_PATH: "/home/nishad/ubuntu.pem"
         run: |
-          set -e
-          echo "Starting secure deployment pipeline..."
+          ssh -i "$PEM_PATH" -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
+            set -e
+            echo "Successfully connected to EC2 instance!"
+            
+            # Navigate to home directory
+            cd ~
+            
+            # Clone or update the repository
+            if [ -d "SAP_APPLICATION_Final" ]; then
+              echo "Repository exists. Pulling latest changes..."
+              cd SAP_APPLICATION_Final
+              git pull origin main
+            else
+              echo "Cloning repository..."
+              git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
+              cd SAP_APPLICATION_Final
+            fi
 
-          cd "${{ github.workspace }}"
+            echo "Setting up and Installing Backend dependencies..."
+            cd backend
+            npm install
 
-          # Handle manual rollback SHA or standard commit
-          if [ "${{ github.event.inputs.target_sha }}" != "" ]; then
-            echo "Rolling back to manual target SHA: ${{ github.event.inputs.target_sha }}"
-            git reset --hard ${{ github.event.inputs.target_sha }}
-          elif [[ "${{ github.event.head_commit.message }}" == *"Roll Back Stable"* ]]; then
-            echo "Roll Back Stable triggered. Reverting to last known stable commit state..."
-            # If rolling back to the previous commit before a broken deploy:
-            git reset --hard HEAD~1
-          else
-            echo "Standard deployment triggered via commit message."
-            git reset --hard HEAD
-          fi
+            echo "Restarting Backend with PM2..."
+            pm2 restart sap-backend || pm2 start server.js --name "sap-backend"
+            pm2 save
 
-          echo "Setting up and Installing Backend dependencies..."
-          cd backend
-          npm install
+            echo "Setting up and Building Frontend..."
+            cd ../frontend
+            npm install
+            npm run build
 
-          echo "Restarting Backend with PM2..."
-          pm2 restart sap-backend || pm2 start server.js --name "sap-backend"
-          pm2 save
+            echo "Copying Frontend build assets to Nginx web root..."
+            sudo rm -rf /var/www/html/*
+            sudo cp -r dist/* /var/www/html/
 
-          echo "Setting up and Building Frontend..."
-          cd ../frontend
-          npm install
-          npm run build
+            echo "Testing and restarting Nginx..."
+            sudo nginx -t
+            sudo systemctl restart nginx
 
-          echo "Copying Frontend build assets to Nginx web root..."
-          sudo rm -rf /var/www/html/*
-          sudo cp -r dist/* /var/www/html/
-
-          echo "Testing and restarting Nginx..."
-          sudo nginx -t
-          sudo systemctl restart nginx
-
-          echo "Deployment/Rollback script executed successfully with zero errors!"
+            echo "Deployment/Rollback script executed successfully with zero errors!"
+          EOF
