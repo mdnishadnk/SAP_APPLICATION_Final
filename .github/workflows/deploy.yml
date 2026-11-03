@@ -41,7 +41,7 @@ jobs:
 
             echo "Setting up and Building Frontend..."
             cd ../frontend
-            npm ci
+            npm install
             npm run build
 
             echo "Deployment script executed successfully!"
