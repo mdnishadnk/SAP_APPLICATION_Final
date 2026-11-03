@@ -11,23 +11,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Deploy and Build MERN Stack Locally
+      - name: Zero-Touch MERN Stack Build and Deploy
         run: |
-          echo "Starting deployment on EC2 instance..."
-          
-          # Navigate to home directory
-          cd ~
-          
-          # Clone or update the repository
-          if [ -d "SAP_APPLICATION_Final" ]; then
-            echo "Repository exists. Pulling latest changes..."
-            cd SAP_APPLICATION_Final
-            git pull origin main
-          else
-            echo "Cloning repository..."
-            git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
-            cd SAP_APPLICATION_Final
-          fi
+          set -e
+          echo "Starting zero-touch deployment on EC2 instance..."
+
+          # Navigate into the checked-out repository path provided by the self-hosted runner
+          cd "${{ github.workspace }}"
+
+          echo "Ensuring clean repository state and pulling latest changes..."
+          git reset --hard HEAD
+          git pull origin main
 
           echo "Setting up and Installing Backend dependencies..."
           cd backend
@@ -50,4 +44,4 @@ jobs:
           sudo nginx -t
           sudo systemctl restart nginx
 
-          echo "Deployment script executed successfully!"
+          echo "Deployment script executed successfully with zero errors!"
