@@ -1,31 +1,48 @@
-name: Test EC2 SSH Login via Local Path
+name: Deploy MERN Stack to EC2
 
 on:
   workflow_dispatch:
 
 jobs:
-  ssh-login-test:
+  deploy:
     runs-on: self-hosted
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Connect to EC2 via SSH and Test Login
+      - name: Connect and Deploy to EC2 via SSH
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           PEM_PATH: "/home/nishad/ubuntu.pem"
         run: |
-          # Use the absolute path to your local private key file
           ssh -i "$PEM_PATH" -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
-            echo "Successfully logged into EC2 instance!"
-            whoami
-            uname -a
-            uptime
-            ls /var/www/html/
-            git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
-            cd /SAP_APPLICATION_Final/backend/
+            echo "Successfully connected to EC2 instance!"
+            
+            # Navigate to home directory
+            cd ~
+            
+            # Clone or update the repository
+            if [ -d "SAP_APPLICATION_Final" ]; then
+              echo "Repository exists. Pulling latest changes..."
+              cd SAP_APPLICATION_Final
+              git pull origin main
+            else
+              echo "Cloning repository..."
+              git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
+              cd SAP_APPLICATION_Final
+            fi
+
+            echo "Setting up Backend..."
+            cd backend
             npm ci
-            cd ../frontend/
+            # Optional: Restart backend using PM2 if installed
+            # pm2 restart server.js || pm2 start server.js --name "backend"
+
+            echo "Setting up and Building Frontend..."
+            cd ../frontend
             npm ci
+            npm run build
+
+            echo "Deployment script executed successfully!"
           EOF
