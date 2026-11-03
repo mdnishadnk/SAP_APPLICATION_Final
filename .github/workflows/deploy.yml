@@ -23,4 +23,4 @@ jobs:
             whoami
             uname -a
             uptime
-            ls /var/www/
+            ls /var/www/html/
