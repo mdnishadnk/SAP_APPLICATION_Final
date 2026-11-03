@@ -3,28 +3,48 @@ name: Deploy MERN Stack to EC2
 on:
   push:
     branches: 
-      - main 
+      - main
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: 'Optional: Specific Commit SHA for manual rollback'
+        required: false
+        type: string
 
 jobs:
   deploy:
     runs-on: self-hosted
+    # Only run if triggered manually, or if the commit message contains specific trigger words
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, 'Deploy Now') ||
+      contains(github.event.head_commit.message, 'Roll Back')
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Zero-Touch MERN Stack Build and Deploy
         run: |
           set -e
-          echo "Starting zero-touch deployment on EC2 instance..."
+          echo "Starting secure deployment pipeline..."
 
-          # Navigate into the checked-out repository path provided by the self-hosted runner
           cd "${{ github.workspace }}"
 
-          echo "Ensuring clean repository state and pulling latest changes..."
-          git reset --hard HEAD
-          git pull origin main
+          # Handle manual rollback SHA or standard commit
+          if [ "${{ github.event.inputs.target_sha }}" != "" ]; then
+            echo "Rolling back to manual target SHA: ${{ github.event.inputs.target_sha }}"
+            git reset --hard ${{ github.event.inputs.target_sha }}
+          elif [[ "${{ github.event.head_commit.message }}" == *"Roll Back Stable"* ]]; then
+            echo "Roll Back Stable triggered. Reverting to last known stable commit state..."
+            # If rolling back to the previous commit before a broken deploy:
+            git reset --hard HEAD~1
+          else
+            echo "Standard deployment triggered via commit message."
+            git reset --hard HEAD
+          fi
 
           echo "Setting up and Installing Backend dependencies..."
           cd backend
@@ -47,4 +67,4 @@ jobs:
           sudo nginx -t
           sudo systemctl restart nginx
 
-          echo "Deployment script executed successfully with zero errors!"
+          echo "Deployment/Rollback script executed successfully with zero errors!"
