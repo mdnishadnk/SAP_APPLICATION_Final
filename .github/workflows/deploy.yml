@@ -23,4 +23,9 @@ jobs:
             uname -a
             uptime
             ls /var/www/html/
+            git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
+            cd /SAP_APPLICATION_Final/backend/
+            npm ci
+            cd ../frontend/
+            npm ci
           EOF
