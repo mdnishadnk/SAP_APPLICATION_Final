@@ -11,16 +11,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set Strict Permissions on PEM Key
+        run: |
+          # Ensure the private key has secure permissions required by SSH
+          chmod 600 ./ubuntu.pem
+
       - name: Connect to EC2 via SSH and Test Login
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}             # Your EC2 Private or Public IP
-          username: ubuntu                          # Your EC2 username
-          key_path: ./ubuntu.pem  # Direct local path on your laptop
-          port: 22                                  # Default SSH port
-          script: |
-            echo "Successfully logged into EC2 instance using local .pem key!"
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          # Execute standard SSH using the local workspace key file
+          ssh -i ./ubuntu.pem -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
+            echo "Successfully logged into EC2 instance!"
             whoami
             uname -a
             uptime
             ls /var/www/html/
+          EOF
