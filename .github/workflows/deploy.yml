@@ -16,7 +16,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}             # Your EC2 Private or Public IP
           username: ubuntu                          # Your EC2 username
-          key_path: /media/nishad/Careers/Google_drive_copy/aws_personal_account/ubuntu.pem  # Direct local path on your laptop
+          key_path: ./ubuntu.pem  # Direct local path on your laptop
           port: 22                                  # Default SSH port
           script: |
             echo "Successfully logged into EC2 instance using local .pem key!"
