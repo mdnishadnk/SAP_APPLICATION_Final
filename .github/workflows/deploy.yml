@@ -14,7 +14,7 @@ jobs:
       - name: Connect to EC2 via SSH and Test Login
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          PEM_PATH: "/media/nishad/Careers/Google_drive_copy/aws_personal_account/ubuntu.pem"
+          PEM_PATH: "/home/nishad/ubuntu.pem"
         run: |
           # Use the absolute path to your local private key file
           ssh -i "$PEM_PATH" -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
