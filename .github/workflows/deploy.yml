@@ -38,10 +38,12 @@ jobs:
             # Navigate to home directory
             cd ~
             
-            # Clone or update the repository
+            # Clone or update the repository and clean local conflicts
             if [ -d "SAP_APPLICATION_Final" ]; then
-              echo "Repository exists. Pulling latest changes..."
+              echo "Repository exists. Resetting local changes and pulling latest..."
               cd SAP_APPLICATION_Final
+              git reset --hard HEAD
+              git clean -fd
               git pull origin main
             else
               echo "Cloning repository..."
