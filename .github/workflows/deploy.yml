@@ -1,7 +1,7 @@
 name: Test EC2 SSH Login via Local Path
 
 on:
-  workflow_dispatch: # Allows you to manually trigger this workflow from the GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   ssh-login-test:
@@ -11,17 +11,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set Strict Permissions on PEM Key
-        run: |
-          # Ensure the private key has secure permissions required by SSH
-          chmod 600 ./ubuntu.pem
-
       - name: Connect to EC2 via SSH and Test Login
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          PEM_PATH: "/media/nishad/Careers/Google_drive_copy/aws_personal_account/ubuntu.pem"
         run: |
-          # Execute standard SSH using the local workspace key file
-          ssh -i ./ubuntu.pem -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
+          # Use the absolute path to your local private key file
+          ssh -i "$PEM_PATH" -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
             echo "Successfully logged into EC2 instance!"
             whoami
             uname -a
