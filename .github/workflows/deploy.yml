@@ -11,38 +11,43 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Connect and Deploy to EC2 via SSH
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          PEM_PATH: "/home/nishad/ubuntu.pem"
+      - name: Deploy and Build MERN Stack Locally
         run: |
-          ssh -i "$PEM_PATH" -o StrictHostKeyChecking=no ubuntu@"$EC2_HOST" << 'EOF'
-            echo "Successfully connected to EC2 instance!"
-            
-            # Navigate to home directory
-            cd ~
-            cd /var/www/
-            # Clone or update the repository
-            if [ -d "SAP_APPLICATION_Final" ]; then
-              echo "Repository exists. Pulling latest changes..."
-              cd SAP_APPLICATION_Final
-              git pull origin main
-            else
-              echo "Cloning repository..."
-              git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
-              cd SAP_APPLICATION_Final
-            fi
+          echo "Starting deployment on EC2 instance..."
+          
+          # Navigate to home directory
+          cd ~
+          
+          # Clone or update the repository
+          if [ -d "SAP_APPLICATION_Final" ]; then
+            echo "Repository exists. Pulling latest changes..."
+            cd SAP_APPLICATION_Final
+            git pull origin main
+          else
+            echo "Cloning repository..."
+            git clone https://github.com/mdnishadnk/SAP_APPLICATION_Final.git
+            cd SAP_APPLICATION_Final
+          fi
 
-            echo "Setting up Backend..."
-            cd backend
-            npm ci
-            # Optional: Restart backend using PM2 if installed
-            # pm2 restart server.js || pm2 start server.js --name "backend"
+          echo "Setting up and Installing Backend dependencies..."
+          cd backend
+          npm install
 
-            echo "Setting up and Building Frontend..."
-            cd ../frontend
-            npm install
-            npm run build
+          echo "Restarting Backend with PM2..."
+          pm2 restart sap-backend || pm2 start server.js --name "sap-backend"
+          pm2 save
 
-            echo "Deployment script executed successfully!"
-          EOF
+          echo "Setting up and Building Frontend..."
+          cd ../frontend
+          npm install
+          npm run build
+
+          echo "Copying Frontend build assets to Nginx web root..."
+          sudo rm -rf /var/www/html/*
+          sudo cp -r dist/* /var/www/html/
+
+          echo "Testing and restarting Nginx..."
+          sudo nginx -t
+          sudo systemctl restart nginx
+
+          echo "Deployment script executed successfully!"
